@@ -2,7 +2,9 @@
 
 namespace App\Controller;
 
+use App\Dto\UsuarioContaDto;
 use App\Dto\UsuarioDto;
+use App\Entity\Conta;
 use App\Entity\Usuario;
 use App\Repository\UsuarioRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -77,8 +79,29 @@ final class UsuariosController extends AbstractController
         $usuario->setTelefone($usuarioDto->getTelefone());
 
         $entityManager->persist($usuario);
+
+        //Instanciar o objeto Conta
+        $conta = new Conta();
+        $numeroConta = preg_replace('/\D/', '', uniqid());
+        //$numeroConta = rand(1, 99999);
+        $conta->setNumero($numeroConta);
+        $conta->setSaldo('0');
+        $conta->setUsuario($usuario);
+
+        //criar registro na tb conta
+        $entityManager->persist($conta);
         $entityManager->flush();
 
-        return $this->json([$usuario]);
+        //retornar os dados de usuário e conta
+        $usuarioContaDto = new UsuarioContaDto();
+        $usuarioContaDto->setId($usuario->getId());
+        $usuarioContaDto->setNome($usuario->getNome());
+        $usuarioContaDto->setCpf($usuario->getCpf());
+        $usuarioContaDto->setEmail($usuario->getEmail());
+        $usuarioContaDto->setTelefone($usuario->getTelefone());
+        $usuarioContaDto->setNumeroConta($conta->getNumero());
+        $usuarioContaDto->setSaldo($conta->getSaldo());
+
+        return $this->json($usuarioContaDto, status: 201);
     }
 }
