@@ -6,6 +6,7 @@ use App\Dto\UsuarioContaDto;
 use App\Dto\UsuarioDto;
 use App\Entity\Conta;
 use App\Entity\Usuario;
+use App\Repository\ContaRepository;
 use App\Repository\UsuarioRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -103,5 +104,29 @@ final class UsuariosController extends AbstractController
         $usuarioContaDto->setSaldo($conta->getSaldo());
 
         return $this->json($usuarioContaDto, status: 201);
+    }
+
+    #[Route('/usuarios/{id}', name: 'usuarios_buscar', methods: ['GET'])]
+    public function buscarPorId(
+        int $id,
+        ContaRepository $contaRepository
+    ) {
+        $conta = $contaRepository->findByUsuarioId($id);
+
+        if(!$conta) {
+            return $this->json([
+                'message' => 'Usuário não encontrado!'
+            ], status: 404);
+        }
+        $usuarioContaDto = new UsuarioContaDto();
+        $usuarioContaDto->setId($conta->getUsuario()->getId());
+        $usuarioContaDto->setNome($conta->getUsuario()->getNome());
+        $usuarioContaDto->setCpf($conta->getUsuario()->getCpf());
+        $usuarioContaDto->setEmail($conta->getUsuario()->getEmail());
+        $usuarioContaDto->setTelefone($conta->getUsuario()->getTelefone());
+        $usuarioContaDto->setNumeroConta($conta->getNumero());
+        $usuarioContaDto->setSaldo($conta->getSaldo());
+
+        return $this->json($usuarioContaDto);
     }
 }

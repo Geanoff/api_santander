@@ -16,6 +16,21 @@ class ContaRepository extends ServiceEntityRepository
         parent::__construct($registry, Conta::class);
     }
 
+
+        /**
+         * @return ?Conta
+         */
+        public function findByUsuarioId($usuarioId): ?Conta
+        {
+            return $this->createQueryBuilder('c')
+                ->join('c.usuario', 'u')
+                ->where('u.id = :id')
+                ->setParameter('id', $usuarioId)
+                ->getQuery()
+                ->getOneOrNullResult()
+            ;
+        }
+
     //    /**
     //     * @return Conta[] Returns an array of Conta objects
     //     */
