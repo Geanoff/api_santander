@@ -10,7 +10,7 @@ class UsuarioContaDto
     private ?string $email = null;
     private ?string $telefone = null;
     private ?string $numeroConta = null;
-    private ? string $saldo = null;
+    private ?string $saldo = null;
 
     /**
      * Get the value of id
