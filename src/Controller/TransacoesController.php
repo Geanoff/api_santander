@@ -3,9 +3,13 @@
 namespace App\Controller;
 
 use App\Dto\TransacaoRealizarDto;
+use App\Entity\Transacao;
 use App\Repository\ContaRepository;
+use DateTime;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -16,10 +20,12 @@ final class TransacoesController extends AbstractController
     public function irealizar(
         #[MapRequestPayload(acceptFormat: 'json')]
         TransacaoRealizarDto $entrada,
-        ContaRepository $contaRepository
-    ): JsonResponse
+        ContaRepository $contaRepository,
+        EntityManagerInterface $entityManager
+    ): Response | JsonResponse
     {
 
+        //VALIDAÇÕES DE ENTRADA
         //1. Validar se a entrada tem id de origem / id de destino / valor
         $erros = [];
         if (!$entrada->getIdUsuarioOrigem()) {
@@ -49,6 +55,7 @@ final class TransacoesController extends AbstractController
             return $this->json($erros, 422);
         }
 
+        //VALIDAÇÕES DE NEGOCIO
         //3. Validar se as contas existem
         $contaOrigem = $contaRepository->findByUsuarioId($entrada->getIdUsuarioOrigem());
         if (!$contaOrigem) {
@@ -63,11 +70,36 @@ final class TransacoesController extends AbstractController
             ], 404);
         }
 
+        //Validar se a origem tem saldo suficiente
+        if ((float) $entrada->getValor() > (float) $contaOrigem->getSaldo() ) {
+            return $this->json([
+                'message' => 'O valor ultrapassa seu saldo disponível'
+            ], 404);
+        }
 
-        return $this->json([
-            'message' => 'Transação efetuada com sucesso!',
-            'path' => 'src/Controller/TransacoesController.php',
-        ]);
+
+        //realizar a transação e salvar no banco
+        $saldo = (float) $contaOrigem->getSaldo();
+        $valorT = (float) $entrada->getValor();
+        $saldoDestino = (float) $contaDestino->getSaldo();
+
+        $contaOrigem->setSaldo($saldo - $valorT);
+        $entityManager->persist($contaOrigem);
+
+        $contaDestino->setSaldo($valorT + $saldoDestino);
+        $entityManager->persist($contaDestino);
+
+        //Registrar a transação
+        $transacao = new Transacao();
+        $transacao->setDataHora(new DateTime());
+        $transacao->setValor($entrada->getValor()); 
+        $transacao->setContaOrigem($contaOrigem);
+        $transacao->setContaDestino($contaDestino);
+        $entityManager->persist($transacao);
+
+        $entityManager->flush();
+
+        return new Response(status: 204);
 
         
 
