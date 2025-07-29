@@ -3,7 +3,9 @@
 namespace App\Repository;
 
 use App\Entity\Transacao;
+use App\Entity\Usuario;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\Common\Collections\Order;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -15,6 +17,33 @@ class TransacaoRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Transacao::class);
     }
+
+
+
+    /**
+     * @return ?Usuario
+     */
+    public function findByUsuarioId($id_conta): ?Usuario
+    {
+        return $this->createQueryBuilder('t')
+            ->where('t.id = :id')
+            ->setParameter('id', $id_conta)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+
+    public function findByContaOrigemOrContaDestino($id_conta): array
+    {
+        return $this->createQueryBuilder('t')
+            ->where('t.contaOrigem = :id')
+            ->orWhere('t.contaDestino = :id')
+            ->setParameter('id', $id_conta)
+            ->orderBy('t.dataHora', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
 
     //    /**
     //     * @return Transacao[] Returns an array of Transacao objects

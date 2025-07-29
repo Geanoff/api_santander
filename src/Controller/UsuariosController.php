@@ -6,12 +6,16 @@ use App\Dto\UsuarioContaDto;
 use App\Dto\UsuarioDto;
 use App\Entity\Conta;
 use App\Entity\Usuario;
+use App\Filter\UsuarioContaFilter;
 use App\Repository\ContaRepository;
 use App\Repository\UsuarioRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
+use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api')]
@@ -22,9 +26,9 @@ final class UsuariosController extends AbstractController
         #[MapRequestPayload(acceptFormat: 'json')]
         UsuarioDto $usuarioDto,
         EntityManagerInterface $entityManager,
-        UsuarioRepository $usuarioRepository
-    ): JsonResponse
-    {
+        UsuarioRepository $usuarioRepository,
+        UserPasswordHasherInterface $passwordHasher
+    ): JsonResponse {
         $erros = [];
         //Validar CPF
         if (empty($usuarioDto->getCpf())) {
@@ -76,7 +80,13 @@ final class UsuariosController extends AbstractController
         $usuario->setCpf($usuarioDto->getCpf());
         $usuario->setNome($usuarioDto->getNome());
         $usuario->setEmail($usuarioDto->getEmail());
-        $usuario->setSenha($usuarioDto->getSenha());
+        //$usuario->setSenha($usuarioDto->getSenha());
+
+        //Criar o hash da senha
+        $senhaComHash = $passwordHasher->hashPassword($usuario, $usuarioDto->getSenha());
+        $usuario->setSenha($senhaComHash);
+
+
         $usuario->setTelefone($usuarioDto->getTelefone());
 
         $entityManager->persist($usuario);
@@ -113,7 +123,7 @@ final class UsuariosController extends AbstractController
     ) {
         $conta = $contaRepository->findByUsuarioId($id);
 
-        if(!$conta) {
+        if (!$conta) {
             return $this->json([
                 'message' => 'Usuário não encontrado!'
             ], status: 404);
@@ -129,4 +139,23 @@ final class UsuariosController extends AbstractController
 
         return $this->json($usuarioContaDto);
     }
+
+    #[Route('/usuarios', name: 'usuarios_buscar_filtro', methods: ['GET'])]
+    public function buscarPorFiltro(
+        #[MapQueryString()]
+        UsuarioContaFilter $filter,
+        ContaRepository $contaRepository
+    ): JsonResponse {
+        $filtro = $filter->getPesquisa();
+        $contas = $contaRepository->findByFiltro($filtro);
+        return $this->json($contas);
+    }
+
+    #[Route('/teste', name: 'teste', methods: ['GET'])]
+    public function teste(): JsonResponse
+    {
+        return $this->json(['ok' => true]);
+    }
 }
+
+//10.38.0.77
